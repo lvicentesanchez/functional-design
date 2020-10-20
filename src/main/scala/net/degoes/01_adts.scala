@@ -1,6 +1,8 @@
 package net.degoes
 
 import java.time.Instant
+import java.time.YearMonth
+import java.time.LocalDateTime
 
 /*
  * INTRODUCTION
@@ -30,7 +32,7 @@ object credit_card {
    *  * Expiration date
    *  * Security code
    */
-  type CreditCard
+  final case class CreditCard(name: String, number: String, expiry: YearMonth, cvv: String)
 
   /**
    * EXERCISE 2
@@ -40,16 +42,27 @@ object credit_card {
    * or a digital product, such as a book or movie, or access to an event, such
    * as a music concert or film showing.
    */
-  type Product
+  type Price
+  type Quantity
+
+  case class Product(id: String, price: Price, quantity: Quantity, `type`: ProductType)
+
+  sealed trait ProductType
+
+  object ProductType {
+
+    final case class Concert(date: LocalDateTime) extends ProductType
+    final case class Milk(brand: String)          extends ProductType
+
+  }
 
   /**
-   * EXERCISE 3
-   *
-   * Using only sealed traits and case classes, create an immutable data model
-   * of a product price, which could be one-time purchase fee, or a recurring
-   * fee on some regular interval.
-   */
-  type PricingScheme
+ * EXERCISE 3
+ *
+ * Using only sealed traits and case classes, create an immutable data model
+ * of a product price, which could be one-time purchase fee, or a recurring
+ * fee on some regular interval.
+ */
 }
 
 /**
@@ -66,34 +79,29 @@ object events {
    * Refactor the object-oriented data model in this section to a more
    * functional one, which uses only sealed traits and case classes.
    */
-  abstract class Event(val id: Int) {
+  final case class Event(id: Int, time: Instant, `type`: EventType)
 
-    def time: Instant
+  sealed trait EventType
+
+  object EventType {
+    final case class DeviceEvent(deviceId: Int, `type`: DeviceEventType) extends EventType
+    final case class UserEvent(userName: String, `type`: UserEventType)  extends EventType
   }
 
-  // Events are either UserEvent (produced by a user) or DeviceEvent (produced by a device),
-  // please don't extend both it will break code!!!
-  trait UserEvent extends Event {
-    def userName: String
+  sealed trait DeviceEventType
+
+  object DeviceEventType {
+
+    case object DeviceActivated                             extends DeviceEventType
+    final case class SensorUpdated(reading: Option[Double]) extends DeviceEventType
   }
 
-  // Events are either UserEvent (produced by a user) or DeviceEvent (produced by a device),
-  // please don't extend both it will break code!!!
-  trait DeviceEvent extends Event {
-    def deviceId: Int
+  sealed trait UserEventType
+
+  object UserEventType {
+    final case class UserPurchase(item: String, price: Double) extends UserEventType
+    case object UserAccountCreated                             extends UserEventType
   }
-
-  class SensorUpdated(id: Int, val deviceId: Int, val time: Instant, val reading: Option[Double])
-      extends Event(id)
-      with DeviceEvent
-
-  class DeviceActivated(id: Int, val deviceId: Int, val time: Instant) extends Event(id) with DeviceEvent
-
-  class UserPurchase(id: Int, val item: String, val price: Double, val time: Instant, val userName: String)
-      extends Event(id)
-      with UserEvent
-
-  class UserAccountCreated(id: Int, val userName: String, val time: Instant) extends Event(id) with UserEvent
 
 }
 
