@@ -443,7 +443,7 @@ object ui_events {
      * by sending each game event to either the left listener, if it does not
      * throw an exception, or the right listener, if the left throws an exception.
      */
-    def orElse(that: Listener): Listener =  Listener { event =>
+    def orElse(that: Listener): Listener = Listener { event =>
       try self.onEvent(event)
       catch {
         case _: Exception => that.onEvent(event)
@@ -480,7 +480,8 @@ object ui_events {
    * listeners in response to each game event, making the gfxUpdateListener
    * run on the `uiExecutionContext`, and debugging the input events.
    */
-  lazy val solution = (twinkleAnimationListener + motionDetectionListener + gfxUpdateListener.runOn(uiExecutionContext)).debug
+  lazy val solution =
+    (twinkleAnimationListener + motionDetectionListener + gfxUpdateListener.runOn(uiExecutionContext)).debug
 
   lazy val twinkleAnimationListener: Listener = ???
   lazy val motionDetectionListener: Listener  = ???
@@ -562,7 +563,7 @@ object education {
      */
     def check(f: QuizResult => Boolean)(ifPass: Quiz, ifFail: Quiz): Quiz = Quiz { () =>
       val result = self.run()
-      val next = if (f(result)) ifPass else ifFail
+      val next   = if (f(result)) ifPass else ifFail
       result + next.run()
     }
   }
@@ -627,10 +628,12 @@ object education {
    */
   lazy val exampleQuiz: Quiz =
     Quiz(Question.TrueFalse("Is coffee the best hot beverage on planet earth?", Checker.isTrue(10))) +
-    fstAdditionalQuestion +
-    sndAdditionalQuestion.bonus.check(_.wrongPoints > 0)(easyQuestion, Quiz.empty).bonus
+      fstAdditionalQuestion +
+      sndAdditionalQuestion.bonus.check(_.wrongPoints > 0)(easyQuestion, Quiz.empty).bonus
 
   lazy val fstAdditionalQuestion = Quiz(Question.Text("What's the capital of Spain", Checker.isText(10)("Madrid")))
-  lazy val sndAdditionalQuestion = Quiz(Question.Text("Why is a Monad a Monoid in the category of endofunctors", Checker.isText(10)("Because")))
+  lazy val sndAdditionalQuestion = Quiz(
+    Question.Text("Why is a Monad a Monoid in the category of endofunctors", Checker.isText(10)("Because"))
+  )
   lazy val easyQuestion = Quiz(Question.TrueFalse("Is Scala the best language?", Checker.isTrue(5)))
 }

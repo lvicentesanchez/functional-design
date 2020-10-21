@@ -56,6 +56,8 @@ object email_filter3 {
     def ||(that: EmailFilter): EmailFilter = EmailFilter.InclusiveOr(self, that)
 
     def ^^(that: EmailFilter): EmailFilter = EmailFilter.ExclusiveOr(self, that)
+
+    def unary_! : EmailFilter =  EmailFilter.Always ^^ self
   }
   object EmailFilter {
     final case object Always                                            extends EmailFilter
@@ -64,27 +66,27 @@ object email_filter3 {
     final case class InclusiveOr(left: EmailFilter, right: EmailFilter) extends EmailFilter
     final case class ExclusiveOr(left: EmailFilter, right: EmailFilter) extends EmailFilter
     final case class SenderEquals(target: Address)                      extends EmailFilter
-    final case class SenderNotEquals(target: Address)                   extends EmailFilter
+    //final case class SenderNotEquals(target: Address)                   extends EmailFilter
     final case class RecipientEquals(target: Address)                   extends EmailFilter
-    final case class RecipientNotEquals(target: Address)                extends EmailFilter
+    //final case class RecipientNotEquals(target: Address)                extends EmailFilter
     final case class SenderIn(targets: Set[Address])                    extends EmailFilter
     final case class RecipientIn(targets: Set[Address])                 extends EmailFilter
     final case class BodyContains(phrase: String)                       extends EmailFilter
-    final case class BodyNotContains(phrase: String)                    extends EmailFilter
+    //final case class BodyNotContains(phrase: String)                    extends EmailFilter
     final case class SubjectContains(phrase: String)                    extends EmailFilter
-    final case class SubjectNotContains(phrase: String)                 extends EmailFilter
+    //final case class SubjectNotContains(phrase: String)                 extends EmailFilter
 
     val always: EmailFilter = Always
 
-    val never: EmailFilter = Always
+    val never: EmailFilter = Never
 
     def senderIs(sender: Address): EmailFilter = SenderEquals(sender)
 
-    def senderIsNot(sender: Address): EmailFilter = SenderNotEquals(sender)
+    def senderIsNot(sender: Address): EmailFilter = !senderIs(sender)
 
     def recipientIs(recipient: Address): EmailFilter = RecipientEquals(recipient)
 
-    def recipientIsNot(recipient: Address): EmailFilter = RecipientNotEquals(recipient)
+    def recipientIsNot(recipient: Address): EmailFilter = !recipientIs(recipient)
 
     def senderIn(senders: Set[Address]): EmailFilter = SenderIn(senders)
 
@@ -92,11 +94,11 @@ object email_filter3 {
 
     def bodyContains(phrase: String): EmailFilter = BodyContains(phrase)
 
-    def bodyDoesNotContain(phrase: String): EmailFilter = BodyNotContains(phrase)
+    def bodyDoesNotContain(phrase: String): EmailFilter =  !bodyContains(phrase)
 
     def subjectContains(phrase: String): EmailFilter = SubjectContains(phrase)
 
-    def subjectDoesNotContain(phrase: String): EmailFilter = SubjectNotContains(phrase)
+    def subjectDoesNotContain(phrase: String): EmailFilter = !subjectContains(phrase)
   }
 }
 
