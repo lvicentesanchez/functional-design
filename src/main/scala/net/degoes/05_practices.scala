@@ -53,28 +53,22 @@ object email_filter3 {
   sealed trait EmailFilter { self =>
     def &&(that: EmailFilter): EmailFilter = EmailFilter.And(self, that)
 
-    def ||(that: EmailFilter): EmailFilter = EmailFilter.InclusiveOr(self, that)
+    def ||(that: EmailFilter): EmailFilter = !(!self && !that)
 
-    def ^^(that: EmailFilter): EmailFilter = EmailFilter.ExclusiveOr(self, that)
+    def ^^(that: EmailFilter): EmailFilter = (self || that) && !(self && that)
 
-    def unary_! : EmailFilter =  EmailFilter.Always ^^ self
+    def unary_! : EmailFilter = EmailFilter.Not(self)
   }
+
   object EmailFilter {
-    final case object Always                                            extends EmailFilter
-    final case object Never                                             extends EmailFilter
-    final case class And(left: EmailFilter, right: EmailFilter)         extends EmailFilter
-    final case class InclusiveOr(left: EmailFilter, right: EmailFilter) extends EmailFilter
-    final case class ExclusiveOr(left: EmailFilter, right: EmailFilter) extends EmailFilter
-    final case class SenderEquals(target: Address)                      extends EmailFilter
-    //final case class SenderNotEquals(target: Address)                   extends EmailFilter
-    final case class RecipientEquals(target: Address)                   extends EmailFilter
-    //final case class RecipientNotEquals(target: Address)                extends EmailFilter
-    final case class SenderIn(targets: Set[Address])                    extends EmailFilter
-    final case class RecipientIn(targets: Set[Address])                 extends EmailFilter
-    final case class BodyContains(phrase: String)                       extends EmailFilter
-    //final case class BodyNotContains(phrase: String)                    extends EmailFilter
-    final case class SubjectContains(phrase: String)                    extends EmailFilter
-    //final case class SubjectNotContains(phrase: String)                 extends EmailFilter
+    final case object Always                                    extends EmailFilter
+    final case object Never                                     extends EmailFilter
+    final case class And(left: EmailFilter, right: EmailFilter) extends EmailFilter
+    final case class Not(value: EmailFilter)                    extends EmailFilter
+    final case class SenderEquals(target: Address)              extends EmailFilter
+    final case class RecipientEquals(target: Address)           extends EmailFilter
+    final case class BodyContains(phrase: String)               extends EmailFilter
+    final case class SubjectContains(phrase: String)            extends EmailFilter
 
     val always: EmailFilter = Always
 
@@ -88,13 +82,15 @@ object email_filter3 {
 
     def recipientIsNot(recipient: Address): EmailFilter = !recipientIs(recipient)
 
-    def senderIn(senders: Set[Address]): EmailFilter = SenderIn(senders)
+    def senderIn(senders: Set[Address]): EmailFilter =
+      senders.foldLeft(never)((acc, address) => acc || SenderEquals(address))
 
-    def recipientIn(recipients: Set[Address]): EmailFilter = RecipientIn(recipients)
+    def recipientIn(recipients: Set[Address]): EmailFilter =
+      recipients.foldLeft(never)((acc, address) => acc || RecipientEquals(address))
 
     def bodyContains(phrase: String): EmailFilter = BodyContains(phrase)
 
-    def bodyDoesNotContain(phrase: String): EmailFilter =  !bodyContains(phrase)
+    def bodyDoesNotContain(phrase: String): EmailFilter = !bodyContains(phrase)
 
     def subjectContains(phrase: String): EmailFilter = SubjectContains(phrase)
 
@@ -123,5 +119,63 @@ object ui_components {
     def goBackward(): Unit
 
     def draw(): Unit
+  }
+
+  // Assuming angular coordinates
+  //
+  object declarative {
+
+    sealed trait Movement { self =>
+
+      def andThen(that: Movement): Movement = Movement.AndThen(self, that)
+    }
+
+    object Movement {
+
+      final case class AndThen(fst: Movement, snd: Movement) extends Movement
+      case object Forward                                    extends Movement
+      case object TurnLeft                                   extends Movement
+
+      def backward: Movement = turnLeft(180) andThen Forward andThen turnRight(180)
+
+      def backward(n: Int): Movement = (1 to n).foldLeft(nothing)((path, _) => backward andThen path)
+
+      def forward: Movement = Forward
+
+      def forward(n: Int): Movement = (1 to n).foldLeft(nothing)((path, _) => TurnLeft andThen TurnLeft)
+
+      def turnLeft(degrees: Int): Movement = (1 to degrees).foldLeft(nothing)((path, _) => Forward andThen path)
+
+      def turnRight(degrees: Int): Movement = turnLeft(360 - degrees)
+
+      def nothing: Movement = turnLeft(360)
+    }
+
+    final case class Position(radius: Int, angle: Int) { self =>
+      def incAngle(increment: Int): Position = Position(radius, angle + increment)
+
+      def incRadius(increment: Int): Position = Position(radius + increment, angle)
+    }
+
+    def interpret(start: Position, movement: Movement): List[Position] = {
+      import Movement._
+      def loop(head: Position, tail: List[Position], pending: Movement): List[Position] = pending match {
+        case AndThen(fst, snd) =>
+          val hd :: tl = loop(head, tail, fst)
+          loop(hd, tl, snd)
+        case Forward  => head.incRadius(1) :: tail
+        case TurnLeft => head.incAngle(1) :: tail
+      }
+
+      loop(start, Nil, movement).foldLeft(List.empty[Position]) {
+        case (lst @ (hd :: _), pos) if hd == pos => lst
+        case (lst, pos)                          => pos :: lst
+      }
+
+      // Unoptimised alternative:
+      //
+      //loop(start, Nil, movement).reverse
+    }
+
   }
 }

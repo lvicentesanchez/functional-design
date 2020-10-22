@@ -31,7 +31,7 @@ object expr {
      * NOTE: Be sure to modify the `calculate` method below, so that it can
      * handle the new operation.
      */
-    final case class Add()
+    final case class Add(fst: Integer, snd: Integer) extends CalculatedValue[Int]
 
     /**
      * EXERCISE 2
@@ -42,7 +42,7 @@ object expr {
      * NOTE: Be sure to modify the `calculate` method below, so that it can
      * handle the new operation.
      */
-    final case class Subtract()
+    final case class Subtract(fst: Integer, snd: Integer) extends CalculatedValue[Int]
 
     /**
      * EXERCISE 3
@@ -53,7 +53,7 @@ object expr {
      * NOTE: Be sure to modify the `calculate` method below, so that it can
      * handle the new operation.
      */
-    final case class Multiply()
+    final case class Multiply(fst: Integer, snd: Integer) extends CalculatedValue[Int]
 
     /**
      * EXERCISE 4
@@ -64,7 +64,7 @@ object expr {
      * NOTE: Be sure to modify the `calculate` method below, so that it can
      * handle the new operation.
      */
-    final case class Concat()
+    final case class Concat(fst: Str, snd: Str) extends CalculatedValue[String]
 
     /**
      * EXERCISE 5
@@ -75,15 +75,20 @@ object expr {
      * NOTE: Be sure to modify the `calculate` method below, so that it can
      * handle the new operation.
      */
-    final case class StartsWith()
+    final case class StartsWith(string: Str, prefix: Str) extends CalculatedValue[Boolean]
   }
 
   import CalculatedValue._
 
   def calculate[A](expr: CalculatedValue[A]): A =
     expr match {
-      case Integer(v) => v
-      case Str(v)     => v
+      case Integer(v)                 => v
+      case Str(v)                     => v
+      case Add(l, r)                  => calculate(l) + calculate(r)
+      case Subtract(l, r)             => calculate(l) - calculate(r)
+      case Multiply(l, r)             => calculate(l) * calculate(r)
+      case Concat(l, r)               => calculate(l) + calculate(r)
+      case StartsWith(string, prefix) => calculate(string).startsWith(calculate(prefix))
     }
 }
 

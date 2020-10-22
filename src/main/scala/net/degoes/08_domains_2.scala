@@ -102,7 +102,7 @@ object loyalty_program {
      * Augment `RuleSet` with an operator that models combining two rule sets
      * into one.
      */
-    def &&(that: RuleSet): RuleSet = ???
+    def &&(that: RuleSet): RuleSet = RuleSet.And(self, that)
 
     /**
      * EXERCISE 2
@@ -110,9 +110,13 @@ object loyalty_program {
      * Augment `RuleSet` with an operator that models combining two rule sets
      * into one.
      */
-    def ||(that: RuleSet): RuleSet = ???
+    def ||(that: RuleSet): RuleSet = RuleSet.Or(self, that)
   }
   object RuleSet {
+
+    final case class And(left: RuleSet, right: RuleSet) extends RuleSet
+
+    final case class Or(left: RuleSet, right: RuleSet) extends RuleSet
 
     /**
      * EXERCISE 3
@@ -121,7 +125,7 @@ object loyalty_program {
      * `SystemAction` whenever a `RuleCalculation[Boolean]` evaluates to
      * true.
      */
-    final case class When( /* ??? */ ) extends RuleSet
+    final case class When(action: SystemAction, condition: RuleCalculation[Boolean]) extends RuleSet
   }
   sealed trait RuleCalculation[+A] { self =>
 
@@ -498,7 +502,38 @@ object input_validation {
      * Implement a method to retrieve the JSON value at the specified path, or
      * fail with a descriptive error message.
      */
-    def get(path: JsonPath): Either[String, Json] = ???
+    def get(path: JsonPath): Either[String, Json] = {
+      import Json._
+      import JsonPath._
+      def loop(path: JsonPath, self: Json): (Either[String, (String, Json)]) =
+        path match {
+          case Identity => Right(("", self))
+          case Field(parent, name) =>
+            loop(parent, self).flatMap {
+              case (prefix, Object(value)) =>
+                value.get(name) match {
+                  case Some(self) => Right((s"$prefix.$name", self))
+                  case None       => Left(s"$prefix.${name} does not exist in $self")
+                }
+
+              case (prefix, _) => Left(s"$prefix is not an object")
+            }
+
+          case Index(parent, index) =>
+            loop(parent, self) flatMap {
+              case (prefix, Sequence(values)) =>
+                values.lift(index) match {
+                  case Some(self) => Right((s"$prefix[${index}]", self))
+                  case _          => Left(s"$prefix[${index}] does not exist in $values")
+                }
+              case (prefix, _) =>
+                Left(s"$prefix is not an array")
+            }
+        }
+
+      // .foo[14].bar.baz does not exist in ...
+      loop(path, this).map(_._2)
+    }
   }
   object Json {
     case object Null                                  extends Json
@@ -542,14 +577,71 @@ object input_validation {
    * 8. Verify that an element in an array meets certain requirements.
    * 9. Verify that all elements in an array meet certain requirements.
    */
-  type Validation[+A]
-  object Validation {}
+  sealed trait Validation[+A] { self =>
+    def flatMap[B](f: A => Validation[B]): Validation[B] = Validation.FlatMap(self, f)
+
+    def map[B](f: A => B): Validation[B] =
+      self.flatMap(a => Validation.const(f(a)))
+  }
+  object Validation {
+    final case class Failure(message: String)                               extends Validation[Nothing]
+    final case class Const[A](value: A)                                     extends Validation[A]
+    final case object Identity                                              extends Validation[Json]
+    final case class FlatMap[A, B](v: Validation[A], f: A => Validation[B]) extends Validation[B]
+    final case class Zoom[A](path: JsonPath, scope: Validation[A])          extends Validation[A]
+
+    val success: Validation[Unit] = const(())
+
+    def fail(message: String): Validation[Nothing] = Failure(message)
+
+    def const[A](a: A): Validation[A] = Const(a)
+
+    val identity: Validation[Json] = Identity
+
+    def extract(path: JsonPath): Validation[Json] = zoom(path)(identity)
+
+    def zoom[A](path: JsonPath): Validation[A] => Validation[A] = Zoom(path, _)
+
+    def predicate[A](f: Json => Either[String, A]): Validation[A] =
+      identity.flatMap { json =>
+        f(json) match {
+          case Left(error) => fail(error)
+          case Right(a)    => const(a)
+        }
+      }
+
+    val string: Validation[String] =
+      predicate {
+        case Json.Text(value) => Right(value)
+        case v                => Left(s"Expected a string but found ${v}")
+      }
+
+    val int: Validation[Int] =
+      predicate {
+        case Json.Number(value) => Right(value.toInt)
+        case v                  => Left(s"Expected an int but found ${v}")
+      }
+  }
 
   /**
    * Implement the `validate` function that can validate some JSON and either
    * return descriptive error messages, or succeed with a unit value.
    */
-  def validate[A](json: Json, validation: Validation[A]): Either[List[String], A] = ???
+  def validate[A](json: Json, validation: Validation[A]): Either[List[String], A] = {
+    import Validation._
+
+    validation match {
+      case Failure(message) => Left(List(message))
+      case Const(value)     => Right(value)
+      case Identity         => Right(json)
+      case FlatMap(v, f)    => validate(json, v).flatMap(a => validate(json, f(a)))
+      case Zoom(path, scope) =>
+        json.get(path) match {
+          case Left(value)  => Left(List(value))
+          case Right(value) => validate(value, scope)
+        }
+    }
+  }
 }
 
 /**

@@ -1,5 +1,8 @@
 package net.degoes
 
+import scala.concurrent.Future
+import scala.util.Try
+
 /*
  * INTRODUCTION
  *
@@ -28,9 +31,10 @@ object binary_values {
      *
      * for all `a`, `b`, `c`.
      */
-    type SomeType
+    type SomeType = String
 
-    def compose(left: SomeType, right: SomeType): SomeType = ???
+    def compose(left: SomeType, right: SomeType): SomeType = left.concat(right)
+
   }
 
   object Exercise2 {
@@ -47,9 +51,9 @@ object binary_values {
      *
      * for all `a`, `b`, `c`.
      */
-    type SomeType
+    type SomeType = Boolean
 
-    def compose(left: SomeType, right: SomeType): SomeType = ???
+    def compose(left: SomeType, right: SomeType): SomeType = left && right
   }
 
   object Exercise3 {
@@ -66,9 +70,9 @@ object binary_values {
      *
      * for all `a`, `b`.
      */
-    type SomeType
+    type SomeType = Int
 
-    def compose(left: SomeType, right: SomeType): SomeType = ???
+    def compose(left: SomeType, right: SomeType): SomeType = left + right
   }
 
   object Exercise4 {
@@ -85,9 +89,9 @@ object binary_values {
      *
      * for all `a`, `b`.
      */
-    type SomeType
+    type SomeType = Set[Int]
 
-    def compose(left: SomeType, right: SomeType): SomeType = ???
+    def compose(left: SomeType, right: SomeType): SomeType = left.union(right)
   }
 
   object Exercise5 {
@@ -101,9 +105,9 @@ object binary_values {
      * combine two queries into one query, such that both results would
      * be queried when the model is executed.
      */
-    type SomeType
+    type SomeType = List[Int]
 
-    def compose(left: SomeType, right: SomeType): SomeType = ???
+    def compose(left: SomeType, right: SomeType): SomeType = left ++ right
   }
 
   object Exercise6 {
@@ -129,9 +133,9 @@ object binary_values {
      * a data type that represents a query, then this `compose` could
      * model running one query, but if it fails, running another.
      */
-    type SomeType
+    type SomeType = Option[Int]
 
-    def compose(left: SomeType, right: SomeType): SomeType = ???
+    def compose(left: SomeType, right: SomeType): SomeType = left.orElse(right)
   }
 
   object Exercise8 {
@@ -161,11 +165,11 @@ object binary_values {
      *
      * for all `a`.
      */
-    type SomeType
+    type SomeType = Int
 
-    def identity: SomeType = ???
+    def identity: SomeType = 0
 
-    def compose(left: SomeType, right: SomeType): SomeType = ???
+    def compose(left: SomeType, right: SomeType): SomeType = left + right
   }
 
   object Exercise10 {
@@ -182,11 +186,11 @@ object binary_values {
      *
      * for all `a`.
      */
-    type SomeType
+    type SomeType = Boolean
 
-    def identity: SomeType = ???
+    def identity: SomeType = false
 
-    def compose(left: SomeType, right: SomeType): SomeType = ???
+    def compose(left: SomeType, right: SomeType): SomeType = left || right
   }
 }
 
@@ -208,9 +212,9 @@ object binary_tcs {
      *
      * for all `a`, `b`, `c`, where `~` means "equivalent to".
      */
-    type SomeType[A]
+    type SomeType[A] = List[A]
 
-    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[(A, B)] = ???
+    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[(A, B)] = left.zip(right)
   }
 
   object Exercise2 {
@@ -227,9 +231,9 @@ object binary_tcs {
      *
      * for all `a`, `b`, `c`, where `~` means "equivalent to".
      */
-    type SomeType[A]
+    type SomeType[A] = Future[A]
 
-    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[(A, B)] = ???
+    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[(A, B)] = left.zip(right)
   }
 
   object Exercise3 {
@@ -246,9 +250,10 @@ object binary_tcs {
      *
      * for all `a`, `b`, `c`, where `~` means "equivalent to".
      */
-    type SomeType[A]
+    type SomeType[A] = List[A]
 
-    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[Either[A, B]] = ???
+    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[Either[A, B]] =
+      left.map(Left(_)) ++ right.map(Right(_))
   }
 
   object Exercise4 {
@@ -265,9 +270,10 @@ object binary_tcs {
      *
      * for all `a`, `b`, `c`, where `~` means "equivalent to".
      */
-    type SomeType[A]
+    type SomeType[A] = Try[A]
 
-    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[Either[A, B]] = ???
+    def compose[A, B](left: SomeType[A], right: SomeType[B]): SomeType[Either[A, B]] =
+      left.map(Left(_)).orElse(right.map(Right(_)))
   }
 
   object Exercise5 {
